@@ -1,5 +1,11 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
+
+// Ensure TypeScript doesn't complain about process in browser/Vite context
+declare var process: {
+  env: {
+    API_KEY: string;
+  };
+};
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
