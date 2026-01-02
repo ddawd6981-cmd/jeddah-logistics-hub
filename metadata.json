@@ -1,0 +1,7 @@
+{
+  "name": "Jeddah Logistics Hub",
+  "description": "A high-end shipping and fleet management system designed for the Jeddah region, featuring Salla/Zid integration, automated shipment assignment, and 50-truck fleet tracking.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
