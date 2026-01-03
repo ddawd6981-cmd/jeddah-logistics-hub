@@ -1,13 +1,22 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Box, Zap, Truck, MapPin, 
-  ChevronLeft, Star, ArrowLeft,
-  CheckCircle, Smartphone, Activity, Wind,
-  MousePointer2, Globe, ShieldCheck, Code,
-  Link as LinkIcon, Server, Database, Layers,
-  CheckCircle2, Search, Smartphone as PhoneIcon,
-  Clock, Shield, LayoutDashboard, Send
+  ChevronLeft, ArrowLeft,
+  Activity, Wind, Check,
+  Shield, 
+  MessageCircle,
+  Clock,
+  ShieldCheck,
+  ChevronDown,
+  Star,
+  Globe,
+  LayoutDashboard,
+  Timer,
+  ChevronUp,
+  CreditCard,
+  Target,
+  Smartphone
 } from 'lucide-react';
 import { JEDDAH_DISTRICTS } from '../constants';
 
@@ -15,17 +24,12 @@ interface LandingPageProps {
   onGoToLogin: () => void;
 }
 
-const CAPTAINS = ['أحمد م.', 'خالد ع.', 'عمر س.', 'فهد ن.', 'إبراهيم و.', 'سلطان ق.'];
-const DELIVERY_STATUSES = ['جاري الاستلام', 'في الطريق للعميل', 'وصل لموقع التوصيل', 'جاري فحص الشحنة'];
-
 const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   const [scrolled, setScrolled] = useState(false);
   const [districtIndex, setDistrictIndex] = useState(0);
-  const [captainIndex, setCaptainIndex] = useState(0);
-  const [statusIndex, setStatusIndex] = useState(0);
   const [fade, setFade] = useState(true);
-  const [districtSearch, setDistrictSearch] = useState('');
-
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -34,11 +38,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
       setFade(false);
       setTimeout(() => {
         setDistrictIndex((prev) => (prev + 1) % JEDDAH_DISTRICTS.length);
-        setCaptainIndex((prev) => (prev + 1) % CAPTAINS.length);
-        setStatusIndex((prev) => (prev + 1) % DELIVERY_STATUSES.length);
         setFade(true);
       }, 500);
-    }, 4500);
+    }, 4000);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -46,23 +48,58 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
     };
   }, []);
 
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 100;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
+  const navLinks = [
+    { name: 'الرئيسية', href: '#home' },
+    { name: 'المميزات', href: '#features' },
+    { name: 'الأسعار', href: '#pricing' },
+    { name: 'الأسئلة الشائعة', href: '#faq' },
+  ];
 
+  const pricingPlans = [
+    { 
+      name: 'باقة التجربة', 
+      price: '25', 
+      desc: 'للمتاجر الناشئة والطلبات المحدودة', 
+      features: ['توصيل خلال 3 ساعات', 'دعم فني عبر واتساب', 'تتبع حي أساسي', 'تقارير أسبوعية'],
+      icon: <Box className="text-slate-400" />
+    },
+    { 
+      name: 'باقة النمو', 
+      price: '19', 
+      desc: 'الخيار الأمثل للمتاجر المتوسطة', 
+      features: ['توصيل فوري خلال 60 دقيقة', 'ربط Webhook كامل (سلة/زد)', 'إثبات POD رقمي بالصورة', 'دعم فني 24/7'], 
+      popular: true,
+      icon: <Zap className="text-white" />
+    },
+    { 
+      name: 'باقة المؤسسات', 
+      price: '15', 
+      desc: 'حلول مخصصة للكميات الكبيرة', 
+      features: ['مدير حساب تقني مخصص', 'توزيع جغرافي ذكي', 'تقارير أداء تحليلية', 'أولوية في التوزيع'],
+      icon: <Shield className="text-indigo-600" />
+    },
+  ];
+
+  const faqs = [
+    { q: 'ما هي المناطق التي تغطيها الخدمة؟', a: 'نغطي حالياً كافة أحياء مدينة جدة من أبحر الشمالية وحتى الخمرة جنوباً، مع خطط توسع قريبة لمكة والمدينة.' },
+    { q: 'هل النظام يدعم الربط مع سلة وزد؟', a: 'نعم، نوفر ربطاً مباشراً وتلقائياً عبر Webhooks يستقبل الطلبات فور تغيير حالتها في متجرك دون تدخل يدوي.' },
+    { q: 'كيف أضمن تحصيل مبالغ الـ COD؟', a: 'النظام يوفر محفظة رقمية لكل مندوب، ويتم تتبع المبالغ المحصلة لحظياً مع تقارير يومية للمطابقة المالية.' },
+    { q: 'هل هناك حد أدنى للشحنات؟', a: 'لا يوجد حد أدنى، باقة التجربة تتيح لك شحن طلب واحد فقط، بينما توفر باقات الأعمال أسعاراً تنافسية للكميات.' }
+  ];
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const target = document.querySelector(href);
+    if (target) {
+      const offset = 100;
+      const elementPosition = target.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
       window.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
       });
     }
   };
-
-  const filteredDistricts = JEDDAH_DISTRICTS.filter(d => d.includes(districtSearch));
 
   return (
     <div className="min-h-screen bg-white font-['Cairo'] text-slate-900 overflow-x-hidden selection:bg-indigo-100 scroll-smooth">
@@ -81,145 +118,149 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
                 <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">Jeddah Logistics Hub</span>
               </div>
             </div>
-            <div className="hidden lg:flex items-center gap-8">
-              <button onClick={() => scrollToSection('features')} className="text-sm font-black text-slate-500 hover:text-indigo-600 transition-colors">المميزات</button>
-              <button onClick={() => scrollToSection('districts')} className="text-sm font-black text-slate-500 hover:text-indigo-600 transition-colors">المناطق</button>
-              <button onClick={() => scrollToSection('integration')} className="text-sm font-black text-slate-500 hover:text-indigo-600 transition-colors">الربط البرمجي</button>
-            </div>
+
+            <ul className="hidden lg:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <li key={link.name}>
+                  <a 
+                    href={link.href} 
+                    onClick={(e) => scrollToSection(e, link.href)}
+                    className="text-sm font-black text-slate-500 hover:text-indigo-600 transition-colors"
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="flex items-center gap-4 lg:gap-8">
-            <div className="flex items-center gap-3">
-              <button onClick={onGoToLogin} className="hidden sm:block text-sm font-black text-slate-600 hover:text-indigo-600 px-6 py-3 transition-colors">دخول النظام</button>
-              <button onClick={onGoToLogin} className="bg-slate-900 text-white px-8 lg:px-10 py-4 rounded-2xl text-sm font-black hover:bg-black elite-shadow transition-all flex items-center gap-2 group">
-                إبدأ الآن <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              </button>
-            </div>
+          
+          <div className="flex items-center gap-4">
+            <button onClick={onGoToLogin} className="bg-slate-900 text-white px-8 lg:px-10 py-4 rounded-2xl text-sm font-black hover:bg-black elite-shadow transition-all flex items-center gap-2 group">
+              دخول النظام <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
       <section id="home" className="relative min-h-screen flex items-center pt-48 lg:pt-24 bg-[#FBFDFF] overflow-hidden">
-        <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-indigo-50/50 rounded-full blur-[120px] -mr-[20%] -mt-[10%] pointer-events-none"></div>
+        {/* Decorative Grid */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
         
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 w-full grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 w-full grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center relative">
           
-          <div className="relative z-10 space-y-12 order-2 lg:order-1 text-center lg:text-right animate-in fade-in slide-in-from-right-10 duration-1000 pt-16 lg:pt-0">
+          <div className="relative z-10 space-y-12 order-2 lg:order-1 text-center lg:text-right">
             <div className="space-y-8">
               <div className="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-2xl elite-shadow border border-indigo-50">
                 <div className="bg-indigo-600 p-2 rounded-xl">
                   <Zap size={18} className="text-white animate-pulse" />
                 </div>
-                <span className="text-[12px] font-black text-indigo-900 uppercase tracking-widest">الأسرع في جدة - توصيل في أقل من ساعة</span>
+                <span className="text-[12px] font-black text-indigo-900 uppercase tracking-widest">توصيل في أقل من 60 دقيقة</span>
               </div>
               
               <h1 className="text-5xl lg:text-[5.5rem] font-black leading-[1.1] tracking-tighter text-slate-900">
-                مستقبلك اللوجستي <br/>
-                يبدأ في <span className="text-indigo-600">جدة.</span>
+                أدر عملياتك <br/>
+                بذكاء <span className="text-indigo-600">الميدان.</span>
               </h1>
               
               <p className="text-xl lg:text-2xl text-slate-500 font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-                اربط متجرك بأسطولنا الاحترافي. نضمن وصول طرودك في <span className="text-slate-900 font-black underline decoration-indigo-200">أقل من 60 دقيقة</span> لكافة أحياء جدة.
+                اربط متجرك بأسطولنا الاحترافي. نضمن وصول طرودك في <span className="text-slate-900 font-black underline decoration-indigo-200">أسرع وقت</span> لكافة أحياء جدة.
               </p>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-5 justify-center lg:justify-start">
-              <button onClick={onGoToLogin} className="bg-indigo-600 text-white px-12 py-6 rounded-[2rem] font-black text-lg shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-1 transition-all flex items-center justify-center gap-4">
-                توصيل شحنتك الأولى <ArrowLeft size={24} />
+              <button onClick={onGoToLogin} className="bg-indigo-600 text-white px-12 py-6 rounded-[2.5rem] font-black text-lg shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-4 group">
+                ابدأ التشغيل الآن <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
               </button>
-              <button onClick={() => scrollToSection('integration')} className="bg-white text-slate-900 border-2 border-slate-100 px-10 py-6 rounded-[2rem] font-black text-lg hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-3">
-                <LinkIcon size={22} /> الربط البرمجي
-              </button>
+              <div className="flex items-center gap-4 px-6 py-4 bg-white rounded-3xl border border-slate-100 elite-shadow">
+                <div className="flex -space-x-4 rtl:space-x-reverse">
+                  {[1,2,3].map(i => (
+                    <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i+10}`} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100" alt="" />
+                  ))}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black text-slate-900">50+ مندوب نشط</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">يجوبون شوارع جدة الآن</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Visual Side */}
           <div className="relative order-1 lg:order-2">
-             <div className="relative bg-white rounded-[4rem] p-4 elite-shadow border border-slate-100 w-full max-w-[550px] mx-auto group overflow-hidden">
-                <div className="relative h-[550px] w-full rounded-[3.5rem] overflow-hidden bg-slate-900">
-                  <div className="absolute inset-0 opacity-40">
-                     <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1000" className="w-full h-full object-cover grayscale brightness-50" alt="Map" />
+            <div className="relative aspect-square w-full max-w-xl mx-auto">
+              {/* Background Glow */}
+              <div className="absolute inset-0 bg-indigo-600/10 rounded-full blur-[120px] animate-pulse"></div>
+              
+              {/* Animated Connection Visual */}
+              <div className="relative z-20 h-full w-full flex items-center justify-center">
+                <div className="w-full h-full relative flex items-center justify-around">
+                  
+                  {/* Driver Side */}
+                  <div className="flex flex-col items-center gap-6 group">
+                    <div className="w-32 h-32 bg-slate-900 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl transition-transform group-hover:scale-110">
+                      <Truck size={56} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <div className="bg-white px-6 py-3 rounded-2xl elite-shadow border border-slate-50 text-center">
+                       <p className="text-xs font-black text-slate-900">الكابتن</p>
+                       <p className="text-[10px] font-bold text-emerald-500">متاح للإرسال</p>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center z-20">
-                     <div className={`transition-all duration-700 transform ${fade ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-                        <div className="bg-white/10 backdrop-blur-md p-8 rounded-[3rem] border border-white/20 shadow-2xl flex flex-col items-center gap-4">
-                           <div className="bg-indigo-600 p-5 rounded-3xl shadow-xl">
-                              <Truck size={42} className="text-white" />
-                           </div>
-                           <div className="text-center">
-                              <p className="text-xs font-black text-indigo-300 uppercase tracking-widest mb-1">كابتن نشط</p>
-                              <p className="text-2xl font-black text-white">{CAPTAINS[captainIndex]}</p>
-                              <div className="flex items-center justify-center gap-2 mt-2">
-                                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                                 <span className="text-xs font-bold text-emerald-400">{DELIVERY_STATUSES[statusIndex]}</span>
-                              </div>
-                           </div>
-                        </div>
-                        <div className="mt-4 flex justify-center">
-                           <div className="bg-indigo-600 px-6 py-2 rounded-2xl text-sm font-black text-white shadow-xl">حي {JEDDAH_DISTRICTS[districtIndex]}</div>
-                        </div>
-                     </div>
+
+                  {/* Animated Connecting Line */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-px">
+                    <svg width="100%" height="20" viewBox="0 0 100 20" fill="none" preserveAspectRatio="none">
+                      <path d="M0 10 H100" stroke="#6366f1" strokeWidth="2" strokeDasharray="6 6">
+                        <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite" />
+                      </path>
+                      <circle cx="50" cy="10" r="4" fill="#6366f1">
+                        <animate attributeName="cx" from="0" to="100" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                  </div>
+
+                  {/* District Side */}
+                  <div className="flex flex-col items-center gap-6 group">
+                    <div className="w-32 h-32 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl transition-transform group-hover:scale-110 relative">
+                      <MapPin size={56} />
+                      <div className="absolute -top-4 -right-4 bg-white p-3 rounded-2xl elite-shadow animate-bounce">
+                        <Timer size={24} className="text-indigo-600" />
+                      </div>
+                    </div>
+                    <div className={`bg-white px-6 py-3 rounded-2xl elite-shadow border border-slate-50 text-center transition-all duration-500 ${fade ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                       <p className="text-xs font-black text-slate-900">حي {JEDDAH_DISTRICTS[districtIndex]}</p>
+                       <p className="text-[10px] font-bold text-indigo-600">60 دقيقة توصيل</p>
+                    </div>
                   </div>
                 </div>
-                {/* Floatings */}
-                <div className="absolute top-10 left-10 z-30 bg-white/90 backdrop-blur-xl p-4 rounded-3xl elite-shadow border border-white/50 flex items-center gap-4">
-                   <div className="bg-emerald-500 p-2 rounded-xl text-white"><CheckCircle size={20} /></div>
-                   <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-400">آخر تسليم</p>
-                      <p className="text-xs font-black text-slate-900">قبل 2 دقيقة</p>
-                   </div>
-                </div>
-             </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-32 bg-white relative overflow-hidden">
+      {/* Features Grid */}
+      <section id="features" className="py-32 bg-white relative">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="text-center max-w-3xl mx-auto mb-24 space-y-6">
-            <h2 className="text-4xl lg:text-6xl font-black tracking-tighter text-slate-900 leading-tight">المميزات التي تجعلنا الخيار الأول</h2>
-            <p className="text-xl text-slate-500 font-medium">نحن لا نوفر مجرد توصيل، بل حل لوجستي متكامل لنمو أعمالك في جدة.</p>
+          <div className="text-center max-w-3xl mx-auto mb-24">
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tight">قوة التكنولوجيا في خدمة اللوجستيات</h2>
+            <p className="text-lg text-slate-500 font-medium">طورنا نظاماً يجمع بين بساطة الاستخدام وقوة الأتمتة لضمان كفاءة تشغيلية بنسبة 100%.</p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { 
-                title: 'توزيع ذكي AI Dispatch', 
-                desc: 'محرك ذكاء اصطناعي يوزع الطلبات على أقرب مندوب متاح في الحي لضمان سرعة فائقة.', 
-                icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100/50' 
-              },
-              { 
-                title: 'ربط سلة وزد مباشر', 
-                desc: 'بوابة ويب هوك متطورة تستقبل طلباتك تلقائياً من متجرك دون أي تدخل يدوي.', 
-                icon: Globe, color: 'text-indigo-600', bg: 'bg-indigo-100/50' 
-              },
-              { 
-                title: 'إثبات رقمي POD', 
-                desc: 'توثيق كل تسليم بالصورة وتوقيع العميل رقمياً مع تتبع الموقع الجغرافي اللحظي.', 
-                icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-100/50' 
-              },
-              { 
-                title: 'تغطية 100% لأحياء جدة', 
-                desc: 'أسطولنا يغطي كافة مناطق جدة من الشمال إلى الجنوب دون استثناءات.', 
-                icon: MapPin, color: 'text-rose-600', bg: 'bg-rose-100/50' 
-              },
-              { 
-                title: 'تتبع لحظي للعميل', 
-                desc: 'رابط مباشر للعملاء لمتابعة المندوب على الخريطة لحظة بلحظة حتى وصول الطلب.', 
-                icon: Smartphone, color: 'text-slate-600', bg: 'bg-slate-100' 
-              },
-              { 
-                title: 'دعم فني 24/7', 
-                desc: 'فريق عمليات متخصص يراقب أسطولك ويحل كافة المشاكل الميدانية على مدار الساعة.', 
-                icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-100/50' 
-              }
+              { icon: <Globe size={32} />, title: "ربط تقني فوري", desc: "تكامل مباشر مع منصات سلة وزد لاستيراد الطلبات تلقائياً وبدء التوصيل فوراً." },
+              { icon: <Target size={32} />, title: "توزيع ذكي (AI)", desc: "خوارزمية متطورة توزع الطلبات على أقرب مندوب متاح حسب السعة والحي الجغرافي." },
+              { icon: <Smartphone size={32} />, title: "تطبيق المناديب", desc: "واجهة احترافية للسائقين لإدارة المهام، توثيق الوصول، وتصوير إثبات الاستلام." },
+              { icon: <CreditCard size={32} />, title: "تحصيل مالي دقيق", desc: "نظام محفظة ذكي يتتبع المبالغ المحصلة (COD) ويصدر تقارير مطابقة يومية للمحاسبة." },
+              { icon: <Activity size={32} />, title: "تتبع لحظي", desc: "خريطة حية تتيح لك مراقبة تحركات 50 شاحنة في شوارع جدة بكل دقة." },
+              { icon: <ShieldCheck size={32} />, title: "أمان وموثوقية", desc: "نظام صلاحيات متقدم يضمن خصوصية البيانات وأمان المبالغ النقدية المحصلة." },
             ].map((f, i) => (
-              <div key={i} className="bg-slate-50 p-12 rounded-[3.5rem] border border-slate-100 hover:bg-white hover:elite-shadow transition-all group">
-                <div className={`${f.bg} w-16 h-16 rounded-2xl flex items-center justify-center ${f.color} mb-10 group-hover:scale-110 transition-transform`}>
-                  <f.icon size={32} />
+              <div key={i} className="p-10 bg-[#FBFDFF] rounded-[3rem] border border-slate-100 hover:border-indigo-200 transition-all group">
+                <div className="bg-white w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 elite-shadow mb-8 group-hover:scale-110 transition-transform">
+                  {f.icon}
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 mb-6">{f.title}</h3>
+                <h3 className="text-xl font-black text-slate-900 mb-4">{f.title}</h3>
                 <p className="text-slate-500 font-bold leading-relaxed">{f.desc}</p>
               </div>
             ))}
@@ -227,170 +268,176 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
         </div>
       </section>
 
-      {/* Integration Guide Section */}
-      <section id="integration" className="py-32 bg-slate-900 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 blur-[120px] rounded-full -mr-48 -mt-48"></div>
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <div className="space-y-12">
-              <div className="space-y-6">
-                <h2 className="text-4xl lg:text-7xl font-black tracking-tighter leading-tight">الربط البرمجي <br/> في <span className="text-indigo-400">ثواني</span></h2>
-                <p className="text-xl text-slate-400 font-medium">خطوات بسيطة لربط متجرك واستقبال الطلبات تلقائياً.</p>
+      {/* Pricing Section */}
+      <section id="pricing" className="py-32 bg-slate-900 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full -mr-64 -mt-64 blur-[120px]"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-600/5 rounded-full -ml-48 -mb-48 blur-[100px]"></div>
+        
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-24">
+            <h2 className="text-4xl lg:text-5xl font-black text-white mb-6 tracking-tight">باقات تناسب نمو تجارتك</h2>
+            <p className="text-lg text-slate-400 font-medium">أسعار شفافة وعادلة، تدفع فقط مقابل ما تشحن.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {pricingPlans.map((plan, i) => (
+              <div key={i} className={`relative p-12 rounded-[3.5rem] border transition-all ${
+                plan.popular ? 'bg-indigo-600 border-indigo-500 scale-105 shadow-2xl' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              }`}>
+                {plan.popular && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-white text-indigo-600 px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
+                    الأكثر طلباً
+                  </div>
+                )}
+                
+                <div className="mb-10">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${plan.popular ? 'bg-white/20' : 'bg-white/5'}`}>
+                    {plan.icon}
+                  </div>
+                  <h3 className={`text-2xl font-black mb-2 ${plan.popular ? 'text-white' : 'text-slate-200'}`}>{plan.name}</h3>
+                  <p className={`text-sm font-bold ${plan.popular ? 'text-indigo-100' : 'text-slate-500'}`}>{plan.desc}</p>
+                </div>
+
+                <div className="mb-10">
+                  <div className="flex items-end gap-2">
+                    <span className={`text-5xl font-black tracking-tighter ${plan.popular ? 'text-white' : 'text-white'}`}>{plan.price}</span>
+                    <span className={`text-sm font-black mb-2 uppercase ${plan.popular ? 'text-indigo-200' : 'text-slate-500'}`}>ر.س / شحنة</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-4 mb-12">
+                  {plan.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${plan.popular ? 'bg-indigo-400' : 'bg-white/10'}`}>
+                        <Check size={12} className="text-white" />
+                      </div>
+                      <span className={`text-sm font-bold ${plan.popular ? 'text-indigo-50' : 'text-slate-300'}`}>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button 
+                  onClick={onGoToLogin}
+                  className={`w-full py-5 rounded-2xl font-black transition-all ${
+                  plan.popular ? 'bg-white text-indigo-600 hover:bg-indigo-50 shadow-xl' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                }`}>
+                  ابدأ مع هذه الباقة
+                </button>
               </div>
-              
-              <div className="space-y-8">
-                {[
-                  { step: '01', title: 'احصل على رابط الويب هوك', desc: 'من لوحة التحكم الخاصة بك، انسخ رابط الاستقبال المخصص لمتجرك.', icon: LinkIcon },
-                  { step: '02', title: 'أضف الرابط في سلة أو زد', desc: 'توجه لإعدادات المطور وأضف الرابط لتلقي تحديثات الطلبات الجديدة.', icon: Server },
-                  { step: '03', title: 'استقبل الطلبات تلقائياً', desc: 'فور تأكيد العميل للطلب، سيظهر لدينا فوراً ويتم إسناده لأقرب مندوب.', icon: CheckCircle2 }
-                ].map((s, i) => (
-                  <div key={i} className="flex items-start gap-6 group">
-                    <div className="bg-white/10 p-4 rounded-2xl text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                      <s.icon size={28} />
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-black text-white mb-2">{s.title}</h4>
-                      <p className="text-slate-400 font-medium">{s.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="bg-slate-800/50 p-1 rounded-[3rem] border border-white/10 shadow-2xl backdrop-blur-sm">
-               <div className="bg-slate-900 rounded-[2.5rem] p-8 space-y-6 font-mono text-sm overflow-hidden">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-3 h-3 rounded-full bg-rose-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                  </div>
-                  <p className="text-indigo-400">// Jeddah Logistics Hub Integration API</p>
-                  <p className="text-slate-300">POST <span className="text-emerald-400">/webhook/v1/orders</span></p>
-                  <div className="space-y-1 pl-4">
-                    <p className="text-slate-500">{'{'}</p>
-                    <p className="pl-4"><span className="text-amber-400">"order_id"</span>: <span className="text-emerald-400">"SA-102934"</span>,</p>
-                    <p className="pl-4"><span className="text-amber-400">"customer_name"</span>: <span className="text-emerald-400">"محمد أحمد"</span>,</p>
-                    <p className="pl-4"><span className="text-amber-400">"district"</span>: <span className="text-emerald-400">"الشاطئ"</span>,</p>
-                    <p className="pl-4"><span className="text-amber-400">"phone"</span>: <span className="text-emerald-400">"053xxxx567"</span></p>
-                    <p className="text-slate-500">{'}'}</p>
-                  </div>
-                  <div className="pt-6 border-t border-white/5">
-                    <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl">
-                      <div className="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg"><CheckCircle2 size={16} /></div>
-                      <p className="text-slate-400 font-black text-xs">تم فك تشفير العنوان بنجاح بواسطة AI</p>
-                    </div>
-                  </div>
-               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Districts Section */}
-      <section id="districts" className="py-32 bg-white relative">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="flex flex-col lg:flex-row justify-between items-end gap-10 mb-20">
-            <div className="space-y-6 max-w-2xl text-right">
-              <h2 className="text-4xl lg:text-6xl font-black tracking-tighter text-slate-900 leading-tight">تغطية شاملة لكافة أحياء جدة</h2>
-              <p className="text-xl text-slate-500 font-medium">سواء كنت في الشمال المترف أو الجنوب النابض بالحياة، أسطولنا يغطي كل زاوية في العروس.</p>
-            </div>
-            <div className="relative w-full lg:w-96">
-              <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="text" 
-                placeholder="ابحث عن حيك..." 
-                className="w-full pr-14 pl-6 py-5 bg-slate-50 border-none rounded-[1.5rem] font-bold outline-none focus:ring-4 focus:ring-indigo-100 transition-all"
-                value={districtSearch}
-                onChange={(e) => setDistrictSearch(e.target.value)}
-              />
-            </div>
+      {/* FAQ Section */}
+      <section id="faq" className="py-32 bg-white">
+        <div className="max-w-4xl mx-auto px-6 lg:px-12">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tight">الأسئلة الشائعة</h2>
+            <p className="text-lg text-slate-500 font-medium">كل ما تحتاج لمعرفته حول خدماتنا اللوجستية في جدة.</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-center">
-            {filteredDistricts.length > 0 ? filteredDistricts.map((d, i) => (
-              <div key={i} className="bg-slate-50 border border-slate-100 px-6 py-3 rounded-2xl text-sm font-black text-slate-700 hover:bg-indigo-600 hover:text-white hover:-translate-y-1 transition-all cursor-default flex items-center gap-2">
-                <MapPin size={14} className="opacity-50" />
-                {d}
+          <div className="space-y-4">
+            {faqs.map((item, i) => (
+              <div key={i} className={`rounded-[2rem] border-2 transition-all overflow-hidden ${openFaq === i ? 'border-indigo-600 bg-indigo-50/30' : 'border-slate-50 bg-[#FBFDFF] hover:border-slate-200'}`}>
+                <button 
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full px-8 py-7 flex items-center justify-between text-right"
+                >
+                  <span className="text-lg font-black text-slate-900">{item.q}</span>
+                  <div className={`p-2 rounded-xl transition-all ${openFaq === i ? 'bg-indigo-600 text-white rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+                    <ChevronDown size={20} />
+                  </div>
+                </button>
+                {openFaq === i && (
+                  <div className="px-8 pb-8 animate-in slide-in-from-top-4 duration-300">
+                    <p className="text-slate-500 font-bold leading-relaxed text-lg">{item.a}</p>
+                  </div>
+                )}
               </div>
-            )) : (
-              <div className="py-20 text-center text-slate-400 font-bold">عذراً، لم نجد نتائج لـ "{districtSearch}"</div>
-            )}
+            ))}
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-32 bg-white overflow-hidden">
-        <div className="max-w-[1200px] mx-auto px-6 relative">
-          <div className="bg-indigo-600 rounded-[4rem] p-12 lg:p-24 text-white text-center relative overflow-hidden shadow-[0_50px_100px_-20px_rgba(79,70,229,0.3)]">
-            <div className="relative z-10 space-y-10">
-              <h2 className="text-4xl lg:text-7xl font-black tracking-tighter leading-tight">هل أنت مستعد لتطوير <br/> لوجستيات متجرك؟</h2>
-              <p className="text-xl lg:text-2xl text-indigo-100 font-medium max-w-2xl mx-auto">ابدأ اليوم مع لوجستيك جدة واستمتع بأتمتة كاملة لشحناتك مع أسرع خدمة توصيل ميدانية.</p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <button onClick={onGoToLogin} className="bg-white text-indigo-600 px-14 py-6 rounded-[2rem] font-black text-xl hover:bg-indigo-50 hover:-translate-y-1 transition-all shadow-2xl flex items-center gap-4">
-                  دخول النظام <ChevronLeft size={24} />
-                </button>
-                <button onClick={() => window.open(`https://wa.me/966538997567`, '_blank')} className="bg-indigo-700/50 text-white border border-white/20 px-12 py-6 rounded-[2rem] font-black text-xl hover:bg-indigo-800/60 transition-all">
-                  تحدث مع المبيعات
-                </button>
-              </div>
+      <section className="py-32 px-6">
+        <div className="max-w-[1400px] mx-auto bg-slate-900 rounded-[4rem] p-12 lg:p-24 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-full bg-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+          <div className="relative z-10 text-center max-w-4xl mx-auto space-y-10">
+            <h2 className="text-4xl lg:text-7xl font-black text-white leading-tight">جاهز لتسريع <br/> عمليات التوصيل لديك؟</h2>
+            <p className="text-xl text-slate-400 font-medium leading-relaxed">انضم لأكثر من 200 متجر إلكتروني يثقون في لوجستيك جدة لإدارة شحناتهم الميدانية.</p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
+              <button onClick={onGoToLogin} className="bg-indigo-600 text-white px-12 py-6 rounded-[2rem] font-black text-xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-4 group">
+                سجل الآن مجاناً <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+              </button>
+              <a href="https://wa.me/966538997567" className="bg-white/10 text-white px-12 py-6 rounded-[2rem] font-black text-xl border border-white/10 hover:bg-white/20 transition-all flex items-center justify-center gap-4">
+                تواصل مع المبيعات <MessageCircle size={24} />
+              </a>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-50 pt-32 pb-16">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24 text-right">
-          <div className="space-y-8">
+      <footer className="py-20 border-t border-slate-50 bg-[#FBFDFF]">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
+          <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white">
+              <div className="bg-slate-900 p-2.5 rounded-2xl text-white">
                 <Box size={24} />
               </div>
-              <span className="text-2xl font-black tracking-tighter">لوجستيك جدة</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tighter">لوجستيك جدة</span>
             </div>
-            <p className="text-slate-500 font-bold leading-relaxed">
-              الخيار الأول للمتاجر الذكية في مدينة جدة. تقنية متقدمة، سرعة فائقة، وأمان تام لشحناتك.
-            </p>
+            <p className="text-slate-500 font-bold leading-relaxed">أول نظام لوجستي ذكي مخصص حصرياً لمدينة جدة لخدمة قطاع المتاجر الإلكترونية بأسطول ميداني احترافي.</p>
+            <div className="flex gap-4">
+               {[1,2,3,4].map(i => (
+                 <div key={i} className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer">
+                   <div className="w-4 h-4 bg-current rounded-sm"></div>
+                 </div>
+               ))}
+            </div>
           </div>
-          
-          <div>
-            <h4 className="text-lg font-black text-slate-900 mb-8">روابط سريعة</h4>
+
+          <div className="space-y-8">
+            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">روابط سريعة</h4>
             <ul className="space-y-4">
-              {['الرئيسية', 'المميزات', 'المناطق المغطاة', 'الربط البرمجي'].map(item => (
-                <li key={item}><button onClick={() => scrollToSection(item === 'المميزات' ? 'features' : item === 'المناطق المغطاة' ? 'districts' : 'integration')} className="text-slate-500 font-bold hover:text-indigo-600 transition-colors">{item}</button></li>
+              {navLinks.map(link => (
+                <li key={link.name}><a href={link.href} onClick={(e) => scrollToSection(e, link.href)} className="text-slate-600 font-black hover:text-indigo-600 transition-colors">{link.name}</a></li>
               ))}
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-lg font-black text-slate-900 mb-8">الدعم والمساعدة</h4>
+          <div className="space-y-8">
+            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">الدعم والمساعدة</h4>
             <ul className="space-y-4">
-              {['مركز المساعدة', 'الأسئلة الشائعة', 'تواصل معنا', 'سياسة الخصوصية'].map(item => (
-                <li key={item}><button onClick={onGoToLogin} className="text-slate-500 font-bold hover:text-indigo-600 transition-colors">{item}</button></li>
-              ))}
+              <li><a href="#" className="text-slate-600 font-black hover:text-indigo-600 transition-colors">مركز المساعدة</a></li>
+              <li><a href="#" className="text-slate-600 font-black hover:text-indigo-600 transition-colors">دليل استخدام النظام</a></li>
+              <li><a href="#" className="text-slate-600 font-black hover:text-indigo-600 transition-colors">الربط البرمجي API</a></li>
+              <li><a href="#" className="text-slate-600 font-black hover:text-indigo-600 transition-colors">سياسة الخصوصية</a></li>
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-lg font-black text-slate-900 mb-8">تواصل معنا</h4>
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 text-slate-500">
-                <MapPin size={20} className="text-indigo-600" />
-                <span className="font-bold">برج طريق الملك، جدة، المملكة العربية السعودية</span>
-              </div>
-              <div className="flex items-center gap-4 text-slate-500">
-                <Smartphone size={20} className="text-indigo-600" />
-                <span className="font-bold">+966 538 997 567</span>
-              </div>
+          <div className="space-y-8">
+            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">تواصل معنا</h4>
+            <div className="space-y-4 text-slate-600 font-black">
+              <p>حي المحمدية، طريق الأمير سلطان</p>
+              <p>جدة، المملكة العربية السعودية</p>
+              <p dir="ltr" className="text-right hover:text-indigo-600 cursor-pointer">+966 538 997 567</p>
+              <p className="hover:text-indigo-600 cursor-pointer">hi@jeddah-logistics.com</p>
             </div>
           </div>
         </div>
         
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pt-16 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-right">
-          <p className="text-slate-400 font-bold">© 2025 لوجستيك جدة. جميع الحقوق محفوظة.</p>
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 mt-20 pt-10 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-sm font-bold text-slate-400">© {new Date().getFullYear()} لوجستيك جدة. جميع الحقوق محفوظة.</p>
           <div className="flex items-center gap-8">
-            <span className="text-slate-400 font-bold text-sm">صُنع بكل فخر في جدة 🇸🇦</span>
+             <img src="https://salla.sa/favicon.ico" className="h-6 grayscale opacity-30" alt="Salla" />
+             <img src="https://zid.sa/favicon.ico" className="h-6 grayscale opacity-30" alt="Zid" />
+             <div className="flex items-center gap-2 text-slate-300 font-black text-[10px] uppercase">
+                <Shield size={14} />
+                بيانات مشفرة وآمنة
+             </div>
           </div>
         </div>
       </footer>

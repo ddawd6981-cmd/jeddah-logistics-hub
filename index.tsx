@@ -24,18 +24,34 @@ injectSpeedInsights();
 // Fixed Admin Avatar URL (Strictly Male Seed - Emad)
 const ADMIN_AVATAR_URL = `https://api.dicebear.com/7.x/avataaars/svg?seed=EmadManagerJeddah&top=shortHair&hairColor=black&facialHair=none&skinColor=pale&eyebrows=flatNatural&clothes=shirthemp`;
 
-class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: ReactNode}) {
+// Defined explicit interfaces for ErrorBoundary to resolve state, props, and children TypeScript errors.
+interface ErrorBoundaryProps {
+  children?: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Fix: Extending React.Component with proper generic types and constructor to ensure 'props' is correctly identified.
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Added constructor with super(props) to properly initialize the base class and resolve generic type inference issues for 'this.props'.
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError(error: Error) {
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
+
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Critical Render Error:", error, errorInfo);
   }
+
   render() {
+    // Fix: Accessing state directly from the component's state property
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-['Cairo']">
@@ -52,6 +68,7 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
         </div>
       );
     }
+    // Fix: Accessing children from props property of the base class.
     return this.props.children;
   }
 }
