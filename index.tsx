@@ -16,10 +16,13 @@ import Settings from './components/Settings';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
 import { Shipment, Truck, Stats, ShipmentStatus, UserRole, DeliveryDetails } from './types';
-import { ADMIN_NAME } from './constants';
+import { ADMIN_NAME, JEDDAH_DISTRICTS } from './constants';
 import { Search, Bell, Menu, X, AlertTriangle, RefreshCcw, Box } from 'lucide-react';
 
 injectSpeedInsights();
+
+// Fixed Admin Avatar URL (Strictly Male Seed - Emad)
+const ADMIN_AVATAR_URL = `https://api.dicebear.com/7.x/avataaars/svg?seed=EmadManagerJeddah&top=shortHair&hairColor=black&facialHair=none&skinColor=pale&eyebrows=flatNatural&clothes=shirthemp`;
 
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: ReactNode}) {
@@ -40,8 +43,8 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
             <div className="bg-rose-50 w-20 h-20 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-8 border-4 border-rose-100">
               <AlertTriangle size={40} />
             </div>
-            <h1 className="text-2xl font-black text-slate-900 mb-4">خطأ في تحميل النظام</h1>
-            <p className="text-slate-500 font-bold mb-8">حدث خلل غير متوقع. يرجى إعادة المحاولة.</p>
+            <h1 className="text-2xl font-black text-slate-900 mb-4">خطأ في تحميل الواجهة</h1>
+            <p className="text-slate-500 font-bold mb-8">حدث خلل أثناء معالجة البيانات. يرجى إعادة المحاولة.</p>
             <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 w-full">
               <RefreshCcw size={20} /> تحديث الصفحة
             </button>
@@ -65,11 +68,10 @@ const App: React.FC = () => {
   const [globalSearch, setGlobalSearch] = useState('');
   const [appReady, setAppReady] = useState(false);
 
-  const STORAGE_KEY_SHIPMENTS = 'jeddah_shipments_final_v1';
-  const STORAGE_KEY_TRUCKS = 'jeddah_trucks_final_v1';
-  const STORAGE_KEY_USER = 'jeddah_user_final_v1';
+  const STORAGE_KEY_SHIPMENTS = 'jeddah_logistics_shipments_v5';
+  const STORAGE_KEY_TRUCKS = 'jeddah_logistics_trucks_v5';
+  const STORAGE_KEY_USER = 'jeddah_logistics_user_v5';
 
-  // Load Initial Data
   useEffect(() => {
     const savedTrucks = localStorage.getItem(STORAGE_KEY_TRUCKS);
     const savedShipments = localStorage.getItem(STORAGE_KEY_SHIPMENTS);
@@ -78,28 +80,29 @@ const App: React.FC = () => {
     if (savedTrucks) {
       setTrucks(JSON.parse(savedTrucks));
     } else {
-      // Create initial seed only if totally empty
-      const seedTrucks: Truck[] = Array.from({ length: 5 }, (_, i) => ({
+      // Initialize with 50 drivers as requested, assigned to Jeddah districts
+      const initialTrucks: Truck[] = Array.from({ length: 50 }, (_, i) => ({
         id: `TRK-${Date.now()}-${i}`,
         plateNumber: `${1000 + i} JED`,
-        driverName: `مندوب تجريبي ${i + 1}`,
-        driverPhone: `050000000${i}`,
+        driverName: `مندوب ${i + 1}`,
+        driverPhone: `050${1000000 + i}`,
         username: `driver${i + 1}`,
         password: '123',
-        assignedDistrict: 'الشاطئ',
+        assignedDistrict: JEDDAH_DISTRICTS[i % JEDDAH_DISTRICTS.length],
         capacity: 50,
         currentLoad: 0,
         totalCodCollected: 0,
         status: 'Active',
         role: 'DRIVER',
         permissions: { canManageFleet: false, canManageShipments: true, canViewFinancials: false, canEditSettings: false, canManageUsers: false, canDeleteData: false, canExportReports: false },
-        location: { lat: 21.5, lng: 39.2 },
-        efficiencyScore: 95
+        location: { lat: 21.5 + (Math.random() - 0.5) * 0.1, lng: 39.2 + (Math.random() - 0.5) * 0.1 },
+        efficiencyScore: 85 + Math.floor(Math.random() * 15)
       }));
-      setTrucks(seedTrucks);
+      setTrucks(initialTrucks);
     }
 
     if (savedShipments) setShipments(JSON.parse(savedShipments));
+    
     if (savedUser) {
       const user = JSON.parse(savedUser);
       setCurrentUser(user);
@@ -109,12 +112,13 @@ const App: React.FC = () => {
     setAppReady(true);
   }, []);
 
-  // Save Data on Change
   useEffect(() => {
     if (appReady) {
       localStorage.setItem(STORAGE_KEY_TRUCKS, JSON.stringify(trucks));
       localStorage.setItem(STORAGE_KEY_SHIPMENTS, JSON.stringify(shipments));
-      if (currentUser) localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+      if (currentUser) {
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+      }
     }
   }, [trucks, shipments, currentUser, appReady]);
 
@@ -135,19 +139,12 @@ const App: React.FC = () => {
   };
 
   const handleDeleteShipment = (id: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذه الشحنة نهائياً؟')) {
+    if (window.confirm('هل أنت متأكد من حذف هذه الشحنة؟')) {
       setShipments(prev => prev.filter(s => s.id !== id));
     }
   };
 
   const handleAssignToTruck = (shipmentId: string, truckId: string) => {
-    // 1. Verify truck actually exists in current state
-    const truckExists = trucks.find(t => t.id === truckId);
-    if (!truckExists) {
-      console.error("Assignment Failed: Target truck does not exist in state.");
-      return;
-    }
-
     setShipments(prev => prev.map(s => s.id === shipmentId ? { ...s, assignedTruckId: truckId, status: ShipmentStatus.ASSIGNED } : s));
     setTrucks(prev => prev.map(t => t.id === truckId ? { ...t, currentLoad: t.currentLoad + 1 } : t));
   };
@@ -169,8 +166,8 @@ const App: React.FC = () => {
     deliveredToday: shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length,
     pendingAssignment: shipments.filter(s => s.status === ShipmentStatus.PENDING).length,
     activeTrucks: trucks.filter(t => t.status === 'Active' && t.role === 'DRIVER').length,
-    avgDeliveryTime: '92 دقيقة',
-    totalCodToCollect: shipments.reduce((acc, s) => acc + (s.paymentMethod === 'COD' ? s.codAmount : 0), 0)
+    avgDeliveryTime: '88 دقيقة',
+    totalCodToCollect: shipments.reduce((acc, s) => acc + (s.paymentMethod === 'COD' && s.status !== ShipmentStatus.DELIVERED ? s.codAmount : 0), 0)
   };
 
   if (viewState === 'landing') return <LandingPage onGoToLogin={() => setViewState('login')} />;
@@ -186,6 +183,7 @@ const App: React.FC = () => {
           setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
           role={role} 
           onLogout={handleLogout} 
+          adminAvatar={ADMIN_AVATAR_URL}
         />
         
         <div className="flex-1 lg:mr-72 flex flex-col h-screen overflow-hidden transition-all duration-300">
@@ -200,7 +198,7 @@ const App: React.FC = () => {
                   type="text" 
                   value={globalSearch} 
                   onChange={(e) => setGlobalSearch(e.target.value)} 
-                  placeholder="ابحث عن شحنة، عميل، أو رقم طلب..." 
+                  placeholder="ابحث عن شحنة أو رقم طلب..." 
                   className="w-full pr-14 pl-6 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" 
                 />
               </div>
@@ -213,10 +211,10 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3 lg:gap-4">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-black text-slate-900 leading-none">{currentUser?.driverName || ADMIN_NAME}</p>
-                  <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">{role === 'ADMIN' ? 'مدير النظام' : 'مندوب'}</p>
+                  <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">{role === 'ADMIN' ? 'المدير التنفيذي' : 'مندوب التوصيل'}</p>
                 </div>
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl border-2 border-slate-50 overflow-hidden elite-shadow">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'admin'}`} className="w-full h-full object-cover" alt="User" />
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl border-2 border-indigo-600/10 overflow-hidden elite-shadow bg-slate-100">
+                  <img src={role === 'ADMIN' ? ADMIN_AVATAR_URL : `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username}`} className="w-full h-full object-cover" alt="User" />
                 </div>
               </div>
             </div>

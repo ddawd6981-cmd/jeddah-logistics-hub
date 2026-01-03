@@ -2,10 +2,9 @@
 import React from 'react';
 import { 
   LayoutDashboard, Package, Truck, MapPin, Settings, Link as LinkIcon, 
-  BarChart3, LogOut, Map as MapIcon, Users, MessageCircle, Box, X 
+  BarChart3, LogOut, Map as MapIcon, Users, Box, X 
 } from 'lucide-react';
 import { UserRole } from '../types';
-import { SUPPORT_PHONE } from '../constants';
 
 interface SidebarProps {
   activeTab: string;
@@ -14,9 +13,10 @@ interface SidebarProps {
   onLogout: () => void;
   isOpen: boolean;
   onClose: () => void;
+  adminAvatar: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogout, isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogout, isOpen, onClose, adminAvatar }) => {
   const adminItems = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { id: 'shipments', label: 'إدارة الشحنات', icon: Package },
@@ -45,18 +45,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
             </div>
             <div className="flex flex-col">
               <h1 className="text-lg font-black tracking-tighter text-white">لوجستيك جدة</h1>
-              <span className="text-[9px] text-slate-500 font-black uppercase mt-1">v3.5 Final</span>
+              <span className="text-[9px] text-slate-500 font-black uppercase mt-1">إصدار 3.5 النهائي</span>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
+        
         <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => { setActiveTab(item.id); if (window.innerWidth < 1024) onClose(); }}
               className={`w-full flex items-center gap-3.5 px-6 py-4 rounded-xl transition-all duration-300 group relative ${
                 activeTab === item.id ? 'bg-white/10 text-white shadow-xl' : 'text-slate-400 hover:bg-white/5'
               }`}
@@ -66,9 +67,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
             </button>
           ))}
         </nav>
+
         <div className="p-6 border-t border-white/5 space-y-4">
-           <button onClick={onLogout} className="flex items-center gap-3 text-slate-500 hover:text-rose-400 transition-all w-full px-6 py-4 rounded-xl hover:bg-rose-500/5">
-            <LogOut size={20} />
+           <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-4">
+             <div className="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden border border-white/10">
+               <img src={role === 'ADMIN' ? adminAvatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=driver`} alt="" />
+             </div>
+             <div className="flex flex-col">
+               <span className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">متصل كـ</span>
+               <span className="text-xs font-black text-white">{role === 'ADMIN' ? 'المدير العام' : 'مندوب الميدان'}</span>
+             </div>
+           </div>
+           <button onClick={onLogout} className="flex items-center gap-3 text-slate-500 hover:text-rose-400 transition-all w-full px-6 py-4 rounded-xl hover:bg-rose-500/5 group">
+            <LogOut size={20} className="group-hover:rotate-180 transition-transform duration-500" />
             <span className="font-black text-sm">تسجيل الخروج</span>
           </button>
         </div>
