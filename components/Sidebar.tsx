@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, Package, Truck, MapPin, Settings, Link as LinkIcon, 
-  BarChart3, LogOut, Map as MapIcon, Users, Box, X 
+  BarChart3, LogOut, Map as MapIcon, Users, Box, X, Building2 
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -20,8 +19,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
   const adminItems = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { id: 'shipments', label: 'إدارة الشحنات', icon: Package },
+    { id: 'stores', label: 'المتاجر والعملاء', icon: Building2 },
     { id: 'live-map', label: 'التتبع المباشر', icon: MapIcon },
-    { id: 'fleet', label: 'الأسطول والمناديب', icon: Truck },
+    { id: 'fleet', label: 'الأسطول والمناديب', icon: Users },
     { id: 'accounts', label: 'مركز الحسابات', icon: Users },
     { id: 'districts', label: 'المناطق والأحياء', icon: MapPin },
     { id: 'integrations', label: 'الربط البرمجي', icon: LinkIcon },
@@ -37,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, role, onLogo
         className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
-      <div className={`w-72 bg-slate-900 h-screen fixed right-0 top-0 text-white flex flex-col z-[70] shadow-2xl transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : 'translate-x-full'} border-l border-white/5`}>
+      <div className={`w-72 bg-slate-900 h-screen fixed right-0 top-0 text-white flex flex-col z-[70] shadow-2xl transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : 'translate-x-full'} border-l border-white/5`} dir="rtl">
         <div className="p-8 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('dashboard')}>
             <div className="bg-indigo-600 w-11 h-11 rounded-xl flex items-center justify-center shadow-xl shadow-indigo-600/40 group-hover:rotate-12 transition-all">

@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { Truck as TruckIcon, User, Phone, MapPin, Package, MoreVertical, X, Plus, Edit2, Trash2, Save, AlertTriangle, CheckSquare, Square, ShieldCheck, Search, Activity, Navigation, Settings2, Power, Filter } from 'lucide-react';
+import { Truck as TruckIcon, User, Phone, MapPin, Package, MoreVertical, X, Plus, Edit2, Trash2, Save, AlertTriangle, CheckSquare, Square, ShieldCheck, Search, Activity, Navigation, Settings2, Power, Filter, Users } from 'lucide-react';
 import { Truck, Shipment } from '../types';
 import { JEDDAH_DISTRICTS } from '../constants';
 
@@ -33,7 +32,7 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
   }), [trucks, finalSearch, filterDistrict]);
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredTrucks.length) {
+    if (selectedIds.size === filteredTrucks.length && filteredTrucks.length > 0) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(filteredTrucks.map(t => t.id)));
@@ -58,12 +57,11 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
 
   return (
     <div className="space-y-6 lg:space-y-10 animate-in fade-in duration-500 pb-20">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-slate-900 p-2.5 rounded-2xl text-white shadow-xl">
-              <TruckIcon size={24} />
+              <Users size={24} />
             </div>
             <h2 className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tight">إدارة الأسطول الميداني</h2>
           </div>
@@ -95,7 +93,6 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
         </div>
       </div>
 
-      {/* Grid Controls */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
          <div className="relative flex-1 w-full">
             <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -126,7 +123,6 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
          </div>
       </div>
 
-      {/* Drivers Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredTrucks.map((truck) => (
           <div 
@@ -136,7 +132,6 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
               selectedIds.has(truck.id) ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-slate-100 hover:border-slate-200 shadow-sm'
             }`}
           >
-             {/* Selection Overlay */}
              <button 
                onClick={(e) => toggleSelectOne(truck.id, e)}
                className={`absolute top-6 left-6 z-10 p-2 rounded-lg transition-all ${
@@ -147,8 +142,12 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
              </button>
 
              <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-[2rem] bg-slate-100 mb-6 overflow-hidden border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
-                   <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${truck.username}`} className="w-full h-full object-cover" alt="" />
+                <div className="w-20 h-20 rounded-[2rem] bg-slate-100 mb-6 overflow-hidden border-4 border-white shadow-lg group-hover:scale-110 transition-transform flex items-center justify-center">
+                   <img 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${truck.username}`} 
+                    className="w-full h-full object-cover" 
+                    alt="Driver Avatar" 
+                  />
                 </div>
                 <h3 className="text-xl font-black text-slate-900 mb-1">{truck.driverName}</h3>
                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4">{truck.plateNumber}</p>
@@ -178,13 +177,6 @@ const FleetManager: React.FC<Props> = ({ trucks, shipments, onUpdateTruck, onAdd
           </div>
         ))}
       </div>
-
-      {filteredTrucks.length === 0 && (
-        <div className="py-24 text-center bg-white rounded-[3rem] border border-slate-100">
-           <Activity size={48} className="mx-auto text-slate-200 mb-4" />
-           <p className="text-slate-400 font-black">لا يوجد نتائج تطابق بحثك</p>
-        </div>
-      )}
     </div>
   );
 };

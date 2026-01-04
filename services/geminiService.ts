@@ -1,14 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export async function parseWebhookAddress(rawText: string) {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Extract shipping details from this raw data: ${rawText}. 
-      Make sure to identify the District in Jeddah.`,
+      contents: `قم باستخراج بيانات الشحن من النص التالي: "${rawText}". 
+      يجب استخراج: اسم العميل، رقم الجوال، الحي (في جدة)، العنوان التفصيلي، والمبلغ (COD).
+      إذا لم يذكر الحي، حاول استنتاجه من العنوان.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -18,9 +18,10 @@ export async function parseWebhookAddress(rawText: string) {
             phone: { type: Type.STRING },
             district: { type: Type.STRING },
             address: { type: Type.STRING },
+            codAmount: { type: Type.NUMBER },
             weight: { type: Type.NUMBER }
           },
-          required: ["customerName", "district", "address"]
+          required: ["customerName", "phone", "district"]
         }
       }
     });

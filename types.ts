@@ -1,4 +1,3 @@
-
 export enum ShipmentStatus {
   PENDING = 'قيد الانتظار',
   RECEIVED = 'تم الاستلام في المستودع',
@@ -13,6 +12,26 @@ export enum ShipmentStatus {
 }
 
 export type UserRole = 'ADMIN' | 'SUPERVISOR' | 'ACCOUNTANT' | 'DRIVER';
+
+export interface StorePermissions {
+  canSend: boolean;
+  canReceive: boolean;
+  accessShipments: boolean;
+  receiveNotifications: boolean;
+}
+
+export interface Store {
+  id: string;
+  name: string;
+  ownerName: string;
+  phone: string;
+  totalCodBalance: number;
+  shipmentCount: number;
+  logo?: string;
+  joinedAt: string;
+  isActive: boolean;
+  permissions: StorePermissions;
+}
 
 export interface AppPermissions {
   canManageFleet: boolean;
@@ -46,6 +65,7 @@ export interface Shipment {
   address: string;
   district: string;
   city: string;
+  storeId?: string; 
   storeSource: 'Salla' | 'Zid' | 'Manual';
   status: ShipmentStatus;
   createdAt: string;
@@ -76,6 +96,8 @@ export interface Truck {
   location: {
     lat: number;
     lng: number;
+    lastUpdated?: string;
+    isReal?: boolean;
   };
   efficiencyScore: number;
 }

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { injectSpeedInsights } from '@vercel/speed-insights';
 import Sidebar from './components/Sidebar';
@@ -15,43 +14,28 @@ import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
-import { Shipment, Truck, Stats, ShipmentStatus, UserRole, DeliveryDetails } from './types';
+import StoreManager from './components/StoreManager';
+import { Shipment, Truck, Stats, ShipmentStatus, UserRole, DeliveryDetails, Store } from './types';
 import { ADMIN_NAME, JEDDAH_DISTRICTS } from './constants';
-import { Search, Bell, Menu, X, AlertTriangle, RefreshCcw, Box } from 'lucide-react';
+import { Search, Bell, Menu, AlertTriangle, RefreshCcw } from 'lucide-react';
 
 injectSpeedInsights();
 
-// Fixed Admin Avatar URL (Strictly Male Seed - Emad)
-const ADMIN_AVATAR_URL = `https://api.dicebear.com/7.x/avataaars/svg?seed=EmadManagerJeddah&top=shortHair&hairColor=black&facialHair=none&skinColor=pale&eyebrows=flatNatural&clothes=shirthemp`;
+// Highly reliable avatar for the System Admin - Simplified URL to avoid broken links
+const ADMIN_AVATAR_URL = `https://ui-avatars.com/api/?name=${encodeURIComponent(ADMIN_NAME)}&background=6366f1&color=fff&bold=true&size=128`;
 
-// Defined explicit interfaces for ErrorBoundary to resolve state, props, and children TypeScript errors.
-interface ErrorBoundaryProps {
-  children?: ReactNode;
-}
+interface ErrorBoundaryProps { children?: ReactNode; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-// Fix: Extending React.Component with proper generic types and constructor to ensure 'props' is correctly identified.
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Added constructor with super(props) to properly initialize the base class and resolve generic type inference issues for 'this.props'.
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Critical Render Error:", error, errorInfo);
-  }
-
   render() {
-    // Fix: Accessing state directly from the component's state property
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-['Cairo']">
@@ -60,7 +44,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               <AlertTriangle size={40} />
             </div>
             <h1 className="text-2xl font-black text-slate-900 mb-4">خطأ في تحميل الواجهة</h1>
-            <p className="text-slate-500 font-bold mb-8">حدث خلل أثناء معالجة البيانات. يرجى إعادة المحاولة.</p>
+            <p className="text-slate-500 mb-8 font-bold">حدث خطأ غير متوقع في معالجة البيانات.</p>
             <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 w-full">
               <RefreshCcw size={20} /> تحديث الصفحة
             </button>
@@ -68,7 +52,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         </div>
       );
     }
-    // Fix: Accessing children from props property of the base class.
     return this.props.children;
   }
 }
@@ -80,24 +63,26 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<Truck | null>(null);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isManualShipmentOpen, setIsManualShipmentOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [appReady, setAppReady] = useState(false);
+  const [isCreateShipmentModalOpen, setIsCreateShipmentModalOpen] = useState(false);
 
-  const STORAGE_KEY_SHIPMENTS = 'jeddah_logistics_shipments_v5';
-  const STORAGE_KEY_TRUCKS = 'jeddah_logistics_trucks_v5';
-  const STORAGE_KEY_USER = 'jeddah_logistics_user_v5';
+  const STORAGE_KEY_SHIPMENTS = 'jeddah_logistics_shipments_v12';
+  const STORAGE_KEY_TRUCKS = 'jeddah_logistics_trucks_v12';
+  const STORAGE_KEY_USER = 'jeddah_logistics_user_v12';
+  const STORAGE_KEY_STORES = 'jeddah_logistics_stores_v12';
 
   useEffect(() => {
     const savedTrucks = localStorage.getItem(STORAGE_KEY_TRUCKS);
     const savedShipments = localStorage.getItem(STORAGE_KEY_SHIPMENTS);
     const savedUser = localStorage.getItem(STORAGE_KEY_USER);
+    const savedStores = localStorage.getItem(STORAGE_KEY_STORES);
 
     if (savedTrucks) {
       setTrucks(JSON.parse(savedTrucks));
     } else {
-      // Initialize with 50 drivers as requested, assigned to Jeddah districts
       const initialTrucks: Truck[] = Array.from({ length: 50 }, (_, i) => ({
         id: `TRK-${Date.now()}-${i}`,
         plateNumber: `${1000 + i} JED`,
@@ -119,6 +104,16 @@ const App: React.FC = () => {
     }
 
     if (savedShipments) setShipments(JSON.parse(savedShipments));
+    if (savedStores) {
+      setStores(JSON.parse(savedStores));
+    } else {
+      setStores([
+        { 
+          id: 'S1', name: 'عطور مكة', ownerName: 'أحمد', phone: '05555555', totalCodBalance: 0, shipmentCount: 0, joinedAt: new Date().toISOString(), isActive: true,
+          permissions: { canSend: true, canReceive: true, accessShipments: true, receiveNotifications: true }
+        }
+      ]);
+    }
     
     if (savedUser) {
       const user = JSON.parse(savedUser);
@@ -133,44 +128,29 @@ const App: React.FC = () => {
     if (appReady) {
       localStorage.setItem(STORAGE_KEY_TRUCKS, JSON.stringify(trucks));
       localStorage.setItem(STORAGE_KEY_SHIPMENTS, JSON.stringify(shipments));
-      if (currentUser) {
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
-      }
+      localStorage.setItem(STORAGE_KEY_STORES, JSON.stringify(stores));
+      if (currentUser) localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+      else localStorage.removeItem(STORAGE_KEY_USER);
     }
-  }, [trucks, shipments, currentUser, appReady]);
+  }, [trucks, shipments, stores, currentUser, appReady]);
 
-  const handleLogin = (user: any) => {
-    const finalUser = user.id === 'ADMIN' ? {
-      id: 'ADMIN', driverName: ADMIN_NAME, username: 'admin', role: 'ADMIN' as UserRole,
-      permissions: { canManageFleet: true, canManageShipments: true, canViewFinancials: true, canEditSettings: true, canManageUsers: true, canDeleteData: true, canExportReports: true }
-    } : user;
-    setCurrentUser(finalUser);
-    setRole(finalUser.role);
-    setViewState('app');
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEY_USER);
-    setCurrentUser(null);
-    setViewState('landing');
-  };
-
-  const handleDeleteShipment = (id: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذه الشحنة؟')) {
-      setShipments(prev => prev.filter(s => s.id !== id));
-    }
-  };
-
-  const handleAssignToTruck = (shipmentId: string, truckId: string) => {
-    setShipments(prev => prev.map(s => s.id === shipmentId ? { ...s, assignedTruckId: truckId, status: ShipmentStatus.ASSIGNED } : s));
-    setTrucks(prev => prev.map(t => t.id === truckId ? { ...t, currentLoad: t.currentLoad + 1 } : t));
-  };
+  const stats: Stats = useMemo(() => ({
+    totalShipments: shipments.length,
+    deliveredToday: shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length,
+    pendingAssignment: shipments.filter(s => s.status === ShipmentStatus.PENDING).length,
+    activeTrucks: trucks.filter(t => t.status === 'Active').length,
+    avgDeliveryTime: "45 دقيقة",
+    totalCodToCollect: shipments.reduce((acc, curr) => acc + (curr.status !== ShipmentStatus.DELIVERED ? curr.codAmount : 0), 0)
+  }), [shipments, trucks]);
 
   const handleUpdateShipmentStatus = (id: string, newStatus: ShipmentStatus, details?: DeliveryDetails) => {
     setShipments(prev => prev.map(s => {
       if (s.id === id) {
         if (newStatus === ShipmentStatus.DELIVERED && details?.cashCollected && s.assignedTruckId) {
           setTrucks(tList => tList.map(t => t.id === s.assignedTruckId ? { ...t, totalCodCollected: t.totalCodCollected + (details.cashCollected || 0) } : t));
+          if (s.storeId) {
+            setStores(sList => sList.map(st => st.id === s.storeId ? { ...st, totalCodBalance: st.totalCodBalance + (details.cashCollected || 0) } : st));
+          }
         }
         return { ...s, status: newStatus, deliveryDetails: details || s.deliveryDetails };
       }
@@ -178,83 +158,182 @@ const App: React.FC = () => {
     }));
   };
 
-  const stats: Stats = {
-    totalShipments: shipments.length,
-    deliveredToday: shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length,
-    pendingAssignment: shipments.filter(s => s.status === ShipmentStatus.PENDING).length,
-    activeTrucks: trucks.filter(t => t.status === 'Active' && t.role === 'DRIVER').length,
-    avgDeliveryTime: '88 دقيقة',
-    totalCodToCollect: shipments.reduce((acc, s) => acc + (s.paymentMethod === 'COD' && s.status !== ShipmentStatus.DELIVERED ? s.codAmount : 0), 0)
+  const handleAssignShipment = (shipmentId: string, truckId: string) => {
+    setShipments(prev => prev.map(s => s.id === shipmentId ? { ...s, assignedTruckId: truckId, status: ShipmentStatus.ASSIGNED } : s));
+    setTrucks(prev => prev.map(t => t.id === truckId ? { ...t, currentLoad: t.currentLoad + 1 } : t));
   };
 
-  if (viewState === 'landing') return <LandingPage onGoToLogin={() => setViewState('login')} />;
-  if (viewState === 'login') return <Login onLogin={handleLogin} trucks={trucks} />;
+  const handleImportShipments = (newShipments: Shipment[]) => {
+    setShipments(prev => [...newShipments, ...prev]);
+  };
+
+  const handleAddShipment = (shipment: Shipment) => {
+    setShipments(prev => [shipment, ...prev]);
+  };
+
+  const handleDeleteShipment = (id: string) => {
+    setShipments(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleDeleteBatch = (ids: string[]) => {
+    setShipments(prev => prev.filter(s => !ids.includes(s.id)));
+  };
+
+  const handleUpdateTruck = (truck: Truck) => {
+    setTrucks(prev => prev.map(t => t.id === truck.id ? truck : t));
+  };
+
+  const handleAddTruck = (truck: Truck) => {
+    setTrucks(prev => [truck, ...prev]);
+  };
+
+  const handleDeleteTruck = (id: string) => {
+    setTrucks(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleAddStore = (store: Store) => {
+    setStores(prev => [store, ...prev]);
+  };
+
+  const handleUpdateStore = (store: Store) => {
+    setStores(prev => prev.map(s => s.id === store.id ? store : s));
+  };
+
+  const handleDeleteStore = (id: string) => {
+    setStores(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleLogin = (user: any) => {
+    setCurrentUser(user);
+    setRole(user.role);
+    setViewState('app');
+    setActiveTab(user.role === 'ADMIN' ? 'dashboard' : 'dashboard');
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setViewState('landing');
+    localStorage.removeItem(STORAGE_KEY_USER);
+  };
+
+  if (viewState === 'landing') {
+    return <LandingPage onGoToLogin={() => setViewState('login')} stats={stats} />;
+  }
+
+  if (viewState === 'login') {
+    return <Login onLogin={handleLogin} trucks={trucks} />;
+  }
+
+  const renderContent = () => {
+    if (role === 'DRIVER') {
+      return (
+        <DriverView 
+          shipments={shipments} 
+          trucks={trucks} 
+          currentUser={currentUser} 
+          onUpdateStatus={handleUpdateShipmentStatus} 
+        />
+      );
+    }
+
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard stats={stats} pendingShipments={shipments.filter(s => s.status === ShipmentStatus.PENDING)} trucks={trucks} onAutoAssign={handleAssignShipment} />;
+      case 'shipments':
+        return (
+          <ShipmentManager 
+            shipments={shipments} 
+            trucks={trucks} 
+            stores={stores}
+            onUpdateStatus={handleUpdateShipmentStatus} 
+            onAssign={handleAssignShipment}
+            onImport={handleImportShipments}
+            onAddShipment={handleAddShipment}
+            onDeleteShipment={handleDeleteShipment}
+            onDeleteBatch={handleDeleteBatch}
+            isCreateModalOpen={isCreateShipmentModalOpen}
+            setIsCreateModalOpen={setIsCreateShipmentModalOpen}
+            searchTerm={globalSearch}
+          />
+        );
+      case 'fleet':
+        return <FleetManager trucks={trucks} shipments={shipments} onUpdateTruck={handleUpdateTruck} onAddTruck={handleAddTruck} onDeleteTruck={handleDeleteTruck} searchTerm={globalSearch} />;
+      case 'stores':
+        return <StoreManager stores={stores} shipments={shipments} onAddStore={handleAddStore} onUpdateStore={handleUpdateStore} onDeleteStore={handleDeleteStore} />;
+      case 'live-map':
+        return <LiveMap trucks={trucks} shipments={shipments} />;
+      case 'accounts':
+        return <AccountManager trucks={trucks} onUpdateTruck={handleUpdateTruck} onDeleteTruck={handleDeleteTruck} onAddTruck={handleAddTruck} searchTerm={globalSearch} />;
+      case 'districts':
+        return <DistrictsManager trucks={trucks} shipments={shipments} searchTerm={globalSearch} />;
+      case 'integrations':
+        return <IntegrationsManager />;
+      case 'analytics':
+        return <Analytics trucks={trucks} shipments={shipments} />;
+      case 'settings':
+        return <Settings />;
+      default:
+        return <Dashboard stats={stats} pendingShipments={shipments.filter(s => s.status === ShipmentStatus.PENDING)} trucks={trucks} onAutoAssign={handleAssignShipment} />;
+    }
+  };
 
   return (
     <ErrorBoundary>
-      <div className="flex bg-[#F8FAFC] min-h-screen font-['Cairo'] text-slate-900 overflow-hidden relative">
+      <div className="min-h-screen bg-[#FBFDFF] flex font-['Cairo'] selection:bg-indigo-100 overflow-x-hidden" dir="rtl">
         <Sidebar 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
           activeTab={activeTab} 
-          setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }} 
+          setActiveTab={setActiveTab} 
           role={role} 
           onLogout={handleLogout} 
+          isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)}
           adminAvatar={ADMIN_AVATAR_URL}
         />
         
-        <div className="flex-1 lg:mr-72 flex flex-col h-screen overflow-hidden transition-all duration-300">
-          <header className="h-20 lg:h-24 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 lg:px-12 flex items-center justify-between sticky top-0 z-40">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 bg-slate-50 rounded-xl text-slate-600">
-                <Menu size={24} />
+        <main className="flex-1 lg:mr-72 min-h-screen transition-all duration-300">
+          <header className="h-24 px-6 lg:px-12 bg-white/80 backdrop-blur-xl border-b border-slate-50 flex items-center justify-between sticky top-0 z-50">
+            <div className="flex items-center gap-6 flex-1">
+              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 bg-slate-900 text-white rounded-2xl shadow-lg">
+                <Menu size={20} />
               </button>
-              <div className="relative group w-full max-w-[400px] hidden md:block">
-                <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              
+              <div className="relative hidden md:block w-full max-w-lg group">
+                <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                 <input 
                   type="text" 
-                  value={globalSearch} 
-                  onChange={(e) => setGlobalSearch(e.target.value)} 
-                  placeholder="ابحث عن شحنة أو رقم طلب..." 
-                  className="w-full pr-14 pl-6 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" 
+                  placeholder="بحث سريع عن شحنة، كابتن، أو حي..." 
+                  className="w-full pr-14 pl-6 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-4 lg:gap-6">
-              <button className="relative p-2.5 lg:p-3.5 bg-slate-50 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all">
+            <div className="flex items-center gap-4 lg:gap-8">
+              <div className="hidden sm:flex flex-col text-left items-end">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">المستخدم الحالي</p>
+                <p className="text-xs font-black text-slate-900">{role === 'ADMIN' ? ADMIN_NAME : currentUser?.driverName}</p>
+              </div>
+              
+              <button className="relative p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-indigo-50 hover:text-indigo-600 transition-all">
                 <Bell size={20} />
+                <span className="absolute top-2 left-2 w-2 h-2 bg-indigo-600 rounded-full border-2 border-white"></span>
               </button>
-              <div className="flex items-center gap-3 lg:gap-4">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-black text-slate-900 leading-none">{currentUser?.driverName || ADMIN_NAME}</p>
-                  <p className="text-[10px] text-indigo-600 font-black uppercase mt-1">{role === 'ADMIN' ? 'المدير التنفيذي' : 'مندوب التوصيل'}</p>
-                </div>
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl border-2 border-indigo-600/10 overflow-hidden elite-shadow bg-slate-100">
-                  <img src={role === 'ADMIN' ? ADMIN_AVATAR_URL : `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username}`} className="w-full h-full object-cover" alt="User" />
-                </div>
+              
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 border-2 border-indigo-100 p-0.5 shadow-lg shadow-indigo-100 overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+                <img 
+                  src={role === 'ADMIN' ? ADMIN_AVATAR_URL : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.driverName || 'User')}&background=6366f1&color=fff&bold=true`} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover rounded-[0.9rem] bg-indigo-50" 
+                />
               </div>
             </div>
           </header>
-          
-          <main className="flex-1 overflow-y-auto p-6 lg:p-12 custom-scrollbar">
-            {role === 'DRIVER' ? (
-              <DriverView shipments={shipments} onUpdateStatus={handleUpdateShipmentStatus} trucks={trucks} currentUser={currentUser} />
-            ) : (
-              <>
-                {activeTab === 'dashboard' && <Dashboard stats={stats} pendingShipments={shipments.filter(s => s.status === ShipmentStatus.PENDING)} trucks={trucks.filter(t => t.role === 'DRIVER')} onAutoAssign={handleAssignToTruck} />}
-                {activeTab === 'shipments' && <ShipmentManager shipments={shipments} trucks={trucks.filter(t => t.role === 'DRIVER')} onUpdateStatus={handleUpdateShipmentStatus} onAssign={handleAssignToTruck} onAddShipment={(s) => setShipments(prev => [s, ...prev])} onDeleteShipment={handleDeleteShipment} isCreateModalOpen={isManualShipmentOpen} setIsCreateModalOpen={setIsManualShipmentOpen} onImport={(data) => setShipments(prev => [...data, ...prev])} searchTerm={globalSearch} />}
-                {activeTab === 'fleet' && <FleetManager trucks={trucks.filter(t => t.role === 'DRIVER')} shipments={shipments} onUpdateTruck={(t) => setTrucks(prev => prev.map(item => item.id === t.id ? t : item))} onAddTruck={(t) => setTrucks(prev => [t, ...prev])} onDeleteTruck={(id) => setTrucks(prev => prev.filter(t => t.id !== id))} searchTerm={globalSearch} />}
-                {activeTab === 'live-map' && <LiveMap trucks={trucks.filter(t => t.role === 'DRIVER')} shipments={shipments} />}
-                {activeTab === 'analytics' && <Analytics trucks={trucks.filter(t => t.role === 'DRIVER')} shipments={shipments} />}
-                {activeTab === 'districts' && <DistrictsManager trucks={trucks.filter(t => t.role === 'DRIVER')} shipments={shipments} />}
-                {activeTab === 'accounts' && <AccountManager trucks={trucks} onUpdateTruck={(t) => setTrucks(prev => prev.map(item => item.id === t.id ? t : item))} onDeleteTruck={(id) => setTrucks(prev => prev.filter(t => t.id !== id))} onAddTruck={(t) => setTrucks(prev => [t, ...prev])} searchTerm={globalSearch} />}
-                {activeTab === 'integrations' && <IntegrationsManager />}
-                {activeTab === 'settings' && <Settings />}
-              </>
-            )}
-          </main>
-        </div>
+
+          <div className="p-6 lg:p-12 max-w-[1600px] mx-auto">
+            {renderContent()}
+          </div>
+        </main>
       </div>
     </ErrorBoundary>
   );
